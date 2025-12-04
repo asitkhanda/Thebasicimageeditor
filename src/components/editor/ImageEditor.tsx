@@ -3,6 +3,22 @@ import ReactCrop, { type Crop as CropType, type PixelCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { 
   Crop, 
   Sliders, 
@@ -97,6 +113,11 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   
   // BG Removal state
   const [isRemovingBg, setIsRemovingBg] = useState(false);
+  
+  // Save state
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [saveFormat, setSaveFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
+  const [saveQuality, setSaveQuality] = useState(0.9);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -241,7 +262,11 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       setFilters(newFilters);
   };
   
-  const handleDownload = async () => {
+  const handleSaveClick = () => {
+    setIsSaveDialogOpen(true);
+  };
+
+  const performDownload = async () => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = await createImage(imageSrc);
@@ -254,9 +279,10 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
         ctx.drawImage(img, 0, 0);
         
         const link = document.createElement('a');
-        link.download = 'edited-image.png';
-        link.href = canvas.toDataURL('image/png');
+        link.download = `edited-image.${saveFormat}`;
+        link.href = canvas.toDataURL(`image/${saveFormat}`, saveQuality);
         link.click();
+        setIsSaveDialogOpen(false);
     }
   };
 
@@ -340,7 +366,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                     <Redo2 className="h-4 w-4" />
                 </Button>
             </div>
-            <Button onClick={handleDownload} className="rounded-full bg-white text-black hover:bg-white/90 px-6 font-semibold shadow-lg shadow-white/10 border-0">
+            <Button onClick={handleSaveClick} className="rounded-full bg-white text-black hover:bg-white/90 px-6 font-semibold shadow-lg shadow-white/10 border-0">
                 <Download className="mr-2 h-4 w-4" /> Save
             </Button>
         </div>
@@ -649,6 +675,58 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             )}
         </div>
       </div>
+
+      {/* Save Dialog */}
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-black/90 border-white/10 text-white backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>Save Image</DialogTitle>
+            <DialogDescription className="text-white/60">
+              Choose your preferred format and quality settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-white/40">Format</Label>
+              <Select value={saveFormat} onValueChange={(v: any) => setSaveFormat(v)}>
+                <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
+                  <SelectItem value="png">PNG (Lossless)</SelectItem>
+                  <SelectItem value="jpeg">JPEG (Compressed)</SelectItem>
+                  <SelectItem value="webp">WebP (Modern)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(saveFormat === 'jpeg' || saveFormat === 'webp') && (
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-white/40">Quality</Label>
+                  <span className="text-xs font-mono text-white/60">{Math.round(saveQuality * 100)}%</span>
+                </div>
+                <Slider
+                  value={[saveQuality * 100]}
+                  min={1}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) => setSaveQuality(v[0] / 100)}
+                  className="[&_.bg-primary]:bg-white"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsSaveDialogOpen(false)} className="text-white/60 hover:text-white hover:bg-white/10">
+              Cancel
+            </Button>
+            <Button onClick={performDownload} className="bg-white text-black hover:bg-white/90">
+              Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
