@@ -92,9 +92,11 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   
   // Adjustment State
   const [filters, setFilters] = useState<FilterValues>(DEFAULT_FILTERS);
+  const [lastAppliedFilters, setLastAppliedFilters] = useState<FilterValues>(DEFAULT_FILTERS);
   
   // History
-  const [history, setHistory] = useState<string[]>([initialImage]);
+  type HistoryState = { src: string; filters: FilterValues };
+  const [history, setHistory] = useState<HistoryState[]>([{ src: initialImage, filters: DEFAULT_FILTERS }]);
   const [historyIndex, setHistoryIndex] = useState(0);
   
   // Drawing state
@@ -145,25 +147,30 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     return `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) saturate(${currentFilters.saturation}%) sepia(${currentFilters.sepia}%) grayscale(${currentFilters.grayscale}%) blur(${currentFilters.blur}px) hue-rotate(${currentFilters.hueRotate}deg)`;
   };
 
-  const addToHistory = (newImageSrc: string) => {
+  const addToHistory = (newSrc: string, newFilters: FilterValues = filters) => {
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newImageSrc);
+    newHistory.push({ src: newSrc, filters: newFilters });
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-    setImageSrc(newImageSrc);
+    setImageSrc(newSrc);
+    setFilters(newFilters);
   };
 
   const handleUndo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
-      setImageSrc(history[historyIndex - 1]);
+      const state = history[historyIndex - 1];
+      setImageSrc(state.src);
+      setFilters(state.filters);
     }
   };
 
   const handleRedo = () => {
     if (historyIndex < history.length - 1) {
       setHistoryIndex(historyIndex + 1);
-      setImageSrc(history[historyIndex + 1]);
+      const state = history[historyIndex + 1];
+      setImageSrc(state.src);
+      setFilters(state.filters);
     }
   };
 
@@ -232,7 +239,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   const endInteraction = () => {
     if (isDrawing) {
       if (canvasRef.current) {
-        addToHistory(canvasRef.current.toDataURL());
+        addToHistory(canvasRef.current.toDataURL(), filters);
       }
     }
     setIsDrawing(false);
@@ -242,26 +249,15 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   // --- Actions ---
 
   const applyFilters = async () => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = await createImage(imageSrc);
-    
-    canvas.width = img.width;
-    canvas.height = img.height;
-    
-    if (ctx) {
-      ctx.filter = getFilterString(filters);
-      ctx.drawImage(img, 0, 0);
-      const newData = canvas.toDataURL();
-      addToHistory(newData);
-      setFilters(DEFAULT_FILTERS);
-    }
+      setLastAppliedFilters(filters);
   };
 
   const applyPreset = (filter: Filter) => {
-      const newFilters = { ...DEFAULT_FILTERS, ...filter.filter };
+      const newFilters = { ...filters, ...filter.filter };
       setFilters(newFilters);
   };
+  
+  const hasChanges = JSON.stringify(filters) !== JSON.stringify(lastAppliedFilters);
   
   const handleSaveClick = () => {
     setIsSaveDialogOpen(true);
@@ -326,7 +322,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
 
           const cropped = await getCroppedImg(imageSrc, finalCrop, rotation, flip);
           if (cropped) {
-              addToHistory(cropped);
+              addToHistory(cropped, filters);
               setRotation(0);
               setFlip({ horizontal: false, vertical: false });
               setCrop(undefined);
@@ -344,7 +340,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
           // Delay slightly to allow UI to update
           await new Promise(resolve => setTimeout(resolve, 100));
           const newSrc = await removeImageBackground(imageSrc);
-          addToHistory(newSrc);
+          addToHistory(newSrc, filters);
           setMode(null);
       } catch (error) {
           console.error("BG Removal failed", error);
@@ -417,29 +413,36 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             style={{ cursor: (mode === 'draw' || mode === 'repair') ? 'crosshair' : 'default' }}
         >
             {mode === 'crop' ? (
-               <ReactCrop
-                 crop={crop}
-                 onChange={(_, percentCrop) => setCrop(percentCrop)}
-                 onComplete={(c) => setCompletedCrop(c)}
-                 aspect={aspect}
-                 className="max-h-full max-w-full shadow-2xl rounded-lg overflow-hidden ring-1 ring-white/20"
-                 style={{
-                     transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
-                     transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
-                 }}
-               >
-                  <img 
-                    ref={imgRef}
-                    src={imageSrc} 
-                    alt="Crop target"
-                    style={{ 
-                        filter: getFilterString(filters),
-                        maxHeight: '75vh',
-                        maxWidth: '100%',
-                        objectFit: 'contain'
-                    }} 
-                  />
-               </ReactCrop>
+               <>
+                {/* Ensure CSS is loaded */}
+                <link rel="stylesheet" href="https://unpkg.com/react-image-crop/dist/ReactCrop.css" />
+                <ReactCrop
+                  crop={crop}
+                  onChange={(_, percentCrop) => setCrop(percentCrop)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={aspect}
+                  className="shadow-2xl rounded-lg ring-1 ring-white/20"
+                  style={{
+                      transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
+                      transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                      position: 'relative',
+                      maxHeight: '75vh',
+                      maxWidth: '100%'
+                  }}
+                >
+                   <img 
+                     ref={imgRef}
+                     src={imageSrc} 
+                     alt="Crop target"
+                     style={{ 
+                         filter: getFilterString(filters),
+                         maxHeight: '75vh',
+                         maxWidth: '100%',
+                         display: 'block'
+                     }} 
+                   />
+                </ReactCrop>
+               </>
             ) : (
                 <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-white/10 group">
                     <div className="absolute inset-0 bg-[url('https://img.freepik.com/free-vector/gray-checker-pattern-background-vector_53876-164058.jpg')] opacity-20 pointer-events-none -z-10" />
@@ -478,7 +481,12 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                     <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                         <h3 className="font-semibold text-white text-lg capitalize">{mode.replace('-', ' ')}</h3>
                         {(mode === 'adjust' || mode === 'filter') && (
-                             <Button size="sm" className="h-8 text-xs rounded-full bg-white text-black hover:bg-white/90" onClick={applyFilters}>
+                             <Button 
+                                size="sm" 
+                                className="h-8 text-xs rounded-full bg-white text-black hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                onClick={applyFilters}
+                                disabled={!hasChanges}
+                             >
                                 <Check className="w-3 h-3 mr-1" /> Apply
                              </Button>
                         )}
