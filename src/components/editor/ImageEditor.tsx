@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactCrop, { type Crop as CropType, type PixelCrop } from 'react-image-crop';
+import ReactCrop, { type Crop as CropType, type PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
@@ -287,6 +287,28 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     }
   };
 
+  const onAspectChange = (value: number | undefined) => {
+      setAspect(value);
+      if (value && imgRef.current) {
+          const { width, height } = imgRef.current;
+          const crop = centerCrop(
+              makeAspectCrop(
+                  {
+                      unit: '%',
+                      width: 90,
+                  },
+                  value,
+                  width,
+                  height
+              ),
+              width,
+              height
+          );
+          setCrop(crop);
+          setCompletedCrop(convertToPixelCrop(crop, width, height));
+      }
+  };
+
   const performCrop = async () => {
       if (!imgRef.current) return;
 
@@ -469,12 +491,12 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                 <div>
                                     <Label className="mb-4 block text-xs font-bold uppercase tracking-widest text-white/40">Aspect Ratio</Label>
                                     <div className="grid grid-cols-3 gap-3">
-                                        <AspectRatioBtn icon={Maximize} label="Free" active={aspect === undefined} onClick={() => setAspect(undefined)} />
-                                        <AspectRatioBtn icon={Square} label="1:1" active={aspect === 1} onClick={() => setAspect(1)} />
-                                        <AspectRatioBtn icon={Monitor} label="16:9" active={aspect === 16/9} onClick={() => setAspect(16/9)} />
-                                        <AspectRatioBtn icon={Smartphone} label="9:16" active={aspect === 9/16} onClick={() => setAspect(9/16)} />
-                                        <AspectRatioBtn icon={RectangleHorizontal} label="4:3" active={aspect === 4/3} onClick={() => setAspect(4/3)} />
-                                        <AspectRatioBtn icon={RectangleVertical} label="3:2" active={aspect === 3/2} onClick={() => setAspect(3/2)} />
+                                        <AspectRatioBtn icon={Maximize} label="Free" active={aspect === undefined} onClick={() => onAspectChange(undefined)} />
+                                        <AspectRatioBtn icon={Square} label="1:1" active={aspect === 1} onClick={() => onAspectChange(1)} />
+                                        <AspectRatioBtn icon={Monitor} label="16:9" active={aspect === 16/9} onClick={() => onAspectChange(16/9)} />
+                                        <AspectRatioBtn icon={Smartphone} label="9:16" active={aspect === 9/16} onClick={() => onAspectChange(9/16)} />
+                                        <AspectRatioBtn icon={RectangleHorizontal} label="4:3" active={aspect === 4/3} onClick={() => onAspectChange(4/3)} />
+                                        <AspectRatioBtn icon={RectangleVertical} label="3:2" active={aspect === 3/2} onClick={() => onAspectChange(3/2)} />
                                     </div>
                                 </div>
 
