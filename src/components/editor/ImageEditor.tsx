@@ -40,7 +40,8 @@ import {
   Wand2,
   Loader2,
   Check,
-  X
+  X,
+  Shrink
 } from 'lucide-react';
 import { 
   createImage, 
@@ -383,6 +384,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                 <ToolButton icon={PenTool} label="Draw" active={mode === 'draw'} onClick={() => setMode('draw')} />
                 <ToolButton icon={Eye} label="Repair" active={mode === 'repair'} onClick={() => setMode('repair')} />
                 <ToolButton icon={Wand2} label="Remove BG" active={mode === 'remove-bg'} onClick={() => setMode('remove-bg')} />
+                <ToolButton icon={Shrink} label="Compress" active={false} onClick={handleSaveClick} />
             </div>
         </div>
 
