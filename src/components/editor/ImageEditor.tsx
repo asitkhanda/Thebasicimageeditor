@@ -355,7 +355,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md">
              <Trash2 className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-medium text-white/50 uppercase tracking-widest">Liquid Editor</span>
+          <span className="text-sm font-medium text-white/50 uppercase tracking-widest">The Basic Image Editor</span>
         </div>
         
         <div className="flex items-center gap-4">
