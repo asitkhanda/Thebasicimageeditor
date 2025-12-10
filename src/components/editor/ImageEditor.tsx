@@ -39,9 +39,10 @@ import {
   RectangleVertical,
   Wand2,
   Loader2,
-  Check,
-  X,
-  Shrink
+  GripVertical,
+  ArrowRightLeft,
+  Shrink,
+  Check
 } from 'lucide-react';
 import { 
   createImage, 
@@ -79,7 +80,7 @@ const DEFAULT_FILTERS: FilterValues = {
   hueRotate: 0,
 };
 
-type Mode = 'crop' | 'adjust' | 'filter' | 'draw' | 'repair' | 'remove-bg' | null;
+type Mode = 'crop' | 'adjust' | 'filter' | 'draw' | 'repair' | 'remove-bg' | 'compress' | null;
 
 interface ImageEditorProps {
   initialImage: string;
@@ -117,6 +118,18 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   // BG Removal state
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   
+  // Compression State
+  const [compressSettings, setCompressSettings] = useState({
+    format: 'image/jpeg',
+    quality: 0.8
+  });
+  const [compressedPreview, setCompressedPreview] = useState<string | null>(null);
+  const [originalPreview, setOriginalPreview] = useState<string | null>(null);
+  const [compressedSize, setCompressedSize] = useState<number>(0);
+  const [originalSize, setOriginalSize] = useState<number>(0);
+  const [comparePos, setComparePos] = useState(50); // Percentage
+  const [isCompressing, setIsCompressing] = useState(false);
+  
   // Save state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [saveFormat, setSaveFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
@@ -142,6 +155,39 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       };
     }
   }, [imageSrc, mode]);
+
+  // Handle Compression Preview
+  useEffect(() => {
+    if (mode === 'compress' && canvasRef.current) {
+        const updateCompression = async () => {
+            setIsCompressing(true);
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            // 1. Generate High-Quality "Original" Reference (PNG)
+            // We do this once or if filters change, to ensure "Before" view matches current edits
+            canvas.toBlob((blob) => {
+                if(blob) {
+                    setOriginalSize(blob.size);
+                    setOriginalPreview(URL.createObjectURL(blob));
+                }
+            }, 'image/png');
+
+            // 2. Generate Compressed Version
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    setCompressedSize(blob.size);
+                    const url = URL.createObjectURL(blob);
+                    setCompressedPreview(url);
+                }
+                setIsCompressing(false);
+            }, compressSettings.format, compressSettings.quality);
+        };
+        
+        const timeout = setTimeout(updateCompression, 100); // Debounce
+        return () => clearTimeout(timeout);
+    }
+  }, [mode, compressSettings, filters, rotation, flip, crop]); // Add transform deps
 
   const getFilterString = (currentFilters: FilterValues) => {
     return `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) saturate(${currentFilters.saturation}%) sepia(${currentFilters.sepia}%) grayscale(${currentFilters.grayscale}%) blur(${currentFilters.blur}px) hue-rotate(${currentFilters.hueRotate}deg)`;
@@ -283,6 +329,23 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     }
   };
 
+  const handleDownloadCompressed = () => {
+    if (!compressedPreview) return;
+    const link = document.createElement('a');
+    const ext = compressSettings.format.split('/')[1];
+    link.download = `compressed-image.${ext === 'jpeg' ? 'jpg' : ext}`;
+    link.href = compressedPreview;
+    link.click();
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const onAspectChange = (value: number | undefined) => {
       setAspect(value);
       if (value && imgRef.current) {
@@ -402,7 +465,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                 <ToolButton icon={PenTool} label="Draw" active={mode === 'draw'} onClick={() => setMode('draw')} />
                 <ToolButton icon={Eye} label="Repair" active={mode === 'repair'} onClick={() => setMode('repair')} />
                 <ToolButton icon={Wand2} label="Remove BG" active={mode === 'remove-bg'} onClick={() => setMode('remove-bg')} />
-                <ToolButton icon={Shrink} label="Compress" active={false} onClick={handleSaveClick} />
+                <ToolButton icon={Shrink} label="Compress" active={mode === 'compress'} onClick={() => setMode('compress')} />
             </div>
         </div>
 
@@ -446,12 +509,15 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             ) : (
                 <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-white/10 group">
                     <div className="absolute inset-0 bg-[url('https://img.freepik.com/free-vector/gray-checker-pattern-background-vector_53876-164058.jpg')] opacity-20 pointer-events-none -z-10" />
+                    
+                    {/* Main Canvas */}
                     <canvas 
                         ref={canvasRef}
                         className="max-w-full max-h-[75vh] object-contain block"
                         style={{ 
                             filter: getFilterString(filters),
-                            transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`
+                            transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
+                            display: mode === 'compress' ? 'none' : 'block' // Hide default canvas in compress mode to use custom view
                         }}
                         onMouseDown={startInteraction}
                         onMouseMove={moveInteraction}
@@ -461,6 +527,77 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                         onTouchMove={moveInteraction}
                         onTouchEnd={endInteraction}
                     />
+
+                    {/* Compression Comparison View */}
+                    {mode === 'compress' && compressedPreview && originalPreview && canvasRef.current && (
+                        <div 
+                            className="relative max-w-full max-h-[75vh] overflow-hidden select-none shadow-2xl rounded-lg ring-1 ring-white/10"
+                            style={{ 
+                                width: canvasRef.current.width, 
+                                height: canvasRef.current.height,
+                                maxWidth: '100%',
+                                aspectRatio: `${canvasRef.current.width} / ${canvasRef.current.height}`
+                            }}
+                            onMouseMove={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = e.clientX - rect.left;
+                                setComparePos(Math.max(0, Math.min(100, (x / rect.width) * 100)));
+                            }}
+                            onTouchMove={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = e.touches[0].clientX - rect.left;
+                                setComparePos(Math.max(0, Math.min(100, (x / rect.width) * 100)));
+                            }}
+                        >
+                            {/* "After" Image (Background) - Shows fully */}
+                            <img 
+                                src={compressedPreview} 
+                                className="absolute inset-0 w-full h-full object-contain select-none" 
+                                draggable={false}
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M0 0h10v10H0zM10 10h10v10H10z'/%3E%3C/g%3E%3C/svg%3E")`
+                                }}
+                                alt="After" 
+                            />
+                            
+
+
+
+
+
+
+
+                            {/* RE-IMPLEMENTATION: The simpler clip-path approach */}
+                            <img 
+                                src={originalPreview} 
+                                className="absolute inset-0 w-full h-full object-contain select-none" 
+                                draggable={false}
+                                style={{
+                                    clipPath: `polygon(0 0, ${comparePos}% 0, ${comparePos}% 100%, 0 100%)`
+                                }}
+                                alt="Before" 
+                            />
+
+                            {/* Slider Handle (Visual only) */}
+                            <div 
+                                className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize z-20 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                                style={{ left: `${comparePos}%` }}
+                            >
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-black ring-2 ring-black/10">
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                </div>
+                            </div>
+                            
+                            {/* Labels */}
+                            <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-md pointer-events-none z-30">
+                                Original ({formatSize(originalSize)})
+                            </div>
+                            <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-md pointer-events-none z-30">
+                                Compressed ({formatSize(compressedSize)})
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -583,6 +720,67 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                         onClick={() => applyPreset(f)} 
                                     />
                                 ))}
+                            </div>
+                        )}
+
+                        {mode === 'compress' && (
+                            <div className="space-y-8">
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-white/40">Estimated Size</Label>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-white tabular-nums tracking-tight">
+                                                {formatSize(compressedSize)}
+                                            </div>
+                                            <div className="text-xs text-white/40 tabular-nums">
+                                                <span className="line-through mr-1">{formatSize(originalSize)}</span>
+                                                <span className="text-green-400">(-{Math.round((1 - compressedSize/originalSize) * 100)}%)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label className="mb-4 block text-xs font-bold uppercase tracking-widest text-white/40">Format</Label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['image/jpeg', 'image/png', 'image/webp'].map(fmt => (
+                                            <button
+                                                key={fmt}
+                                                onClick={() => setCompressSettings(s => ({...s, format: fmt}))}
+                                                className={cn(
+                                                    "px-3 py-3 rounded-xl border text-sm font-medium transition-all",
+                                                    compressSettings.format === fmt 
+                                                        ? "bg-white text-black border-white shadow-lg" 
+                                                        : "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                                                )}
+                                            >
+                                                {fmt.split('/')[1].toUpperCase().replace('JPEG', 'JPG')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <Label className="flex justify-between">
+                                        <span className="text-xs font-bold uppercase tracking-widest text-white/40">Quality</span>
+                                        <span className="text-xs text-white/60 font-mono">{Math.round(compressSettings.quality * 100)}%</span>
+                                    </Label>
+                                    <Slider 
+                                        value={[compressSettings.quality]} 
+                                        min={0.1} max={1} step={0.05} 
+                                        onValueChange={([v]) => setCompressSettings(s => ({...s, quality: v}))}
+                                        className="py-4"
+                                    />
+                                </div>
+
+                                <Button 
+                                    onClick={handleDownloadCompressed}
+                                    className="w-full rounded-2xl py-6 text-base mt-6 bg-white text-black hover:bg-white/90 font-semibold shadow-lg shadow-white/10"
+                                    disabled={isCompressing}
+                                >
+                                    {isCompressing ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                                    Download File
+                                </Button>
                             </div>
                         )}
 

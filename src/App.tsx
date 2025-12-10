@@ -87,7 +87,7 @@ export default function App() {
             
             <label className="relative cursor-pointer group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-white text-black hover:bg-white/90 font-semibold py-5 px-12 rounded-full transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 flex items-center gap-2 text-lg">
+              <div className="relative bg-white text-black hover:bg-white/90 font-semibold py-5 px-12 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 flex items-center gap-2 text-lg rounded-[40px]">
                 <ImageIcon className="w-5 h-5" />
                 Start Editing
               </div>
@@ -99,9 +99,13 @@ export default function App() {
               />
             </label>
             
-            <div className="mt-16 flex items-center gap-3 text-xs font-medium text-white/30 uppercase tracking-widest px-6 py-3 rounded-full border border-white/5 bg-white/5 backdrop-blur-md">
+            <div className="mt-16 flex items-center gap-3 text-xs font-medium text-white/30 uppercase tracking-widest px-6 py-3 rounded-full border border-white/5 bg-white/5 backdrop-blur-md bg-[rgba(255,255,255,0.14)]">
               <ImageIcon className="w-4 h-4 opacity-50" />
               <span>Supports Most Image Formats</span>
+            </div>
+
+            <div className="mt-8 text-white/20 text-xs font-light text-[rgba(188,181,181,0.86)]">
+              Created with &lt;3 by <a href="https://asit.design" target="_blank" rel="noopener noreferrer" className="hover:text-white/40 transition-colors border-b border-white/10 hover:border-white/40 pb-0.5">Asit</a>
             </div>
         </div>
       </div>
