@@ -208,6 +208,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       const state = history[historyIndex - 1];
       setImageSrc(state.src);
       setFilters(state.filters);
+      setLastAppliedFilters(state.filters);
     }
   };
 
@@ -217,6 +218,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       const state = history[historyIndex + 1];
       setImageSrc(state.src);
       setFilters(state.filters);
+      setLastAppliedFilters(state.filters);
     }
   };
 
@@ -296,6 +298,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
 
   const applyFilters = async () => {
       setLastAppliedFilters(filters);
+      addToHistory(imageSrc, filters);
   };
 
   const applyPreset = (filter: Filter) => {
@@ -433,10 +436,10 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       {/* Top Bar */}
       <header className="relative z-50 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md">
+          <Button variant="ghost" size="icon" onClick={onClose} className="fixed bottom-6 left-6 z-50 rounded-full h-10 w-10 bg-white/10 hover:bg-white/20 text-[rgb(255,255,255)] border border-white/10 backdrop-blur-md bg-[rgba(255,53,53,0.1)]">
              <Trash2 className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-medium text-white/50 uppercase tracking-widest">The Basic Image Editor</span>
+          <span className="text-sm font-medium text-white/50 uppercase tracking-widest">Essential Editor Panel</span>
         </div>
         
         <div className="flex items-center gap-4">
@@ -448,7 +451,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                     <Redo2 className="h-4 w-4" />
                 </Button>
             </div>
-            <Button onClick={handleSaveClick} className="rounded-full bg-white text-black hover:bg-white/90 px-6 font-semibold shadow-lg shadow-white/10 border-0">
+            <Button onClick={handleSaveClick} disabled={historyIndex === 0} className="rounded-full bg-white text-black hover:bg-white/90 px-6 font-semibold shadow-lg shadow-white/10 border-0 disabled:opacity-50 disabled:cursor-not-allowed">
                 <Download className="mr-2 h-4 w-4" /> Save
             </Button>
         </div>
@@ -508,7 +511,12 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                </>
             ) : (
                 <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-white/10 group">
-                    <div className="absolute inset-0 bg-[url('https://img.freepik.com/free-vector/gray-checker-pattern-background-vector_53876-164058.jpg')] opacity-20 pointer-events-none -z-10" />
+                    <div 
+                        className="absolute inset-0 pointer-events-none -z-10 opacity-20"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23808080' fill-opacity='1'%3E%3Cpath d='M0 0h10v10H0zM10 10h10v10H10z'/%3E%3C/g%3E%3C/svg%3E")`
+                        }}
+                    />
                     
                     {/* Main Canvas */}
                     <canvas 
@@ -717,7 +725,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                         key={f.name} 
                                         filter={f} 
                                         imageSrc={imageSrc} 
-                                        onClick={() => applyPreset(f)} 
+                                        onClick={() => setFilters({ ...lastAppliedFilters, ...f.filter })}
                                     />
                                 ))}
                             </div>

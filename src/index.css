@@ -1214,6 +1214,10 @@
     }
   }
 
+  .bg-\[rgba\(255\,53\,53\,0\.1\)\] {
+    background-color: #ff35351a;
+  }
+
   .bg-\[rgba\(255\,255\,255\,0\.14\)\] {
     background-color: #ffffff24;
   }
@@ -1409,10 +1413,6 @@
 
   .bg-\[url\(\'https\:\/\/images\.unsplash\.com\/photo-1618005182384-a83a8bd57fbe\?q\=80\&w\=2564\&auto\=format\&fit\=crop\'\)\] {
     background-image: url("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop");
-  }
-
-  .bg-\[url\(\'https\:\/\/img\.freepik\.com\/free-vector\/gray-checker-pattern-background-vector_53876-164058\.jpg\'\)\] {
-    background-image: url("https://img.freepik.com/free-vector/gray-checker-pattern-background-vector_53876-164058.jpg");
   }
 
   .from-black\/80 {
@@ -1694,6 +1694,10 @@
 
   .whitespace-nowrap {
     white-space: nowrap;
+  }
+
+  .text-\[rgb\(255\,255\,255\)\] {
+    color: #fff;
   }
 
   .text-\[rgba\(188\,181\,181\,0\.86\)\] {

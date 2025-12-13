@@ -76,7 +76,7 @@ export default function App() {
             
             <h1 className="text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-lg">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70">
-                    The Basic Image Editor
+                    Essential Editor
                 </span>
             </h1>
             
@@ -89,7 +89,7 @@ export default function App() {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30 group-hover:opacity-75 transition duration-500"></div>
               <div className="relative bg-white text-black hover:bg-white/90 font-semibold py-5 px-12 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 flex items-center gap-2 text-lg rounded-[40px]">
                 <ImageIcon className="w-5 h-5" />
-                Start Editing
+                Select your first image
               </div>
               <input 
                 type="file" 

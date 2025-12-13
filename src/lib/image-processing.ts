@@ -1,7 +1,17 @@
-import {
-  removeBackground,
-  Config,
-} from "@imgly/background-removal";
+// Helper to configure ONNX Runtime globally to avoid multi-threading errors
+// in environments without cross-origin isolation (COOP/COEP)
+if (typeof window !== "undefined") {
+  // @ts-ignore
+  if (!window.ort) window.ort = {};
+  // @ts-ignore
+  if (!window.ort.env) window.ort.env = {};
+  // @ts-ignore
+  if (!window.ort.env.wasm) window.ort.env.wasm = {};
+  // @ts-ignore
+  window.ort.env.wasm.numThreads = 1;
+  // @ts-ignore
+  window.ort.env.wasm.proxy = false;
+}
 
 /**
  * Helper functions for image processing
@@ -116,6 +126,9 @@ export async function removeImageBackground(
   imageSrc: string,
 ): Promise<string> {
   try {
+    // Dynamic import to ensure configuration runs before library loads
+    const { removeBackground } = await import("@imgly/background-removal");
+    
     // We use the default configuration which automatically resolves assets
     // from unpkg/jsdelivr based on the installed version.
     // This avoids "Failed to fetch" errors caused by mismatched version URLs.
