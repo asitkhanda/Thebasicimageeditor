@@ -1,6 +1,6 @@
 
   {
-      "name": "Basic Image Editor",
+      "name": "Essential Editor",
       "version": "0.1.0",
       "private": true,
       "dependencies": {

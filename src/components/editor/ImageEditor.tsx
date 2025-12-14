@@ -42,7 +42,8 @@ import {
   GripVertical,
   ArrowRightLeft,
   Shrink,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 import { 
   createImage, 
@@ -434,12 +435,12 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       )}
 
       {/* Top Bar */}
-      <header className="relative z-50 flex items-center justify-between px-6 py-4">
+      <header className="relative z-50 flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onClose} className="fixed bottom-6 left-6 z-50 rounded-full h-10 w-10 bg-white/10 hover:bg-white/20 text-[rgb(255,255,255)] border border-white/10 backdrop-blur-md bg-[rgba(255,53,53,0.1)]">
+          <Button variant="ghost" size="icon" onClick={onClose} className="fixed top-[4.5rem] left-4 md:top-auto md:bottom-6 md:left-6 z-50 rounded-full h-10 w-10 bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md bg-[rgba(255,53,53,0.1)]">
              <Trash2 className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-medium text-white/50 uppercase tracking-widest">Essential Editor Panel</span>
+          <span className="text-sm font-medium text-white/50 uppercase tracking-widest hidden md:inline-block">Essential Editor Panel</span>
         </div>
         
         <div className="flex items-center gap-4">
@@ -459,9 +460,9 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
 
       {/* Main Workspace */}
       <div className="relative flex-1 flex overflow-hidden z-10">
-        {/* Floating Toolbar (Left) */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-20">
-            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-3 rounded-[2rem] shadow-2xl flex flex-col gap-3">
+        {/* Floating Toolbar (Left/Bottom) */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-6 md:bottom-auto md:left-6 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 flex flex-row md:flex-col gap-4 z-20 w-[90vw] md:w-auto justify-center md:justify-start">
+            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-3 rounded-2xl md:rounded-[2rem] shadow-2xl flex flex-row md:flex-col gap-3 overflow-x-auto no-scrollbar w-full md:w-auto justify-between md:justify-start">
                 <ToolButton icon={Crop} label="Crop" active={mode === 'crop'} onClick={() => setMode('crop')} />
                 <ToolButton icon={Sliders} label="Adjust" active={mode === 'adjust'} onClick={() => setMode('adjust')} />
                 <ToolButton icon={Palette} label="Filters" active={mode === 'filter'} onClick={() => setMode('filter')} />
@@ -475,7 +476,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
         {/* Canvas Area (Center) */}
         <div 
             ref={containerRef}
-            className="flex-1 relative flex items-center justify-center overflow-hidden p-12 pl-32 pr-[24rem]"
+            className="flex-1 relative flex items-center justify-center overflow-hidden p-4 pb-32 md:p-12 md:pl-32 md:pr-[24rem]"
             style={{ cursor: (mode === 'draw' || mode === 'repair') ? 'crosshair' : 'default' }}
         >
             {mode === 'crop' ? (
@@ -610,8 +611,13 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             )}
         </div>
 
-        {/* Properties Panel (Right Sidebar) */}
-        <div className="absolute right-6 top-6 bottom-6 w-80 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
+        {/* Properties Panel (Right Sidebar / Bottom Sheet) */}
+        <div className={cn(
+            "absolute bg-white/5 backdrop-blur-3xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all z-30",
+            "md:right-6 md:top-6 md:bottom-6 md:w-80 md:rounded-[2.5rem] md:left-auto md:h-auto", // Desktop
+            "left-0 right-0 bottom-0 h-[50vh] rounded-t-[2rem]", // Mobile
+            !mode ? "hidden md:flex" : "flex"
+        )}>
             {!mode ? (
                 <div className="flex flex-col items-center justify-center h-full text-white/40 text-center p-8">
                     <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/10">
@@ -623,8 +629,18 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             ) : (
                 <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
-                        <h3 className="font-semibold text-white text-lg capitalize">{mode.replace('-', ' ')}</h3>
+                    <div className="p-4 md:p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => setMode(null)}
+                                className="md:hidden h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10"
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                            <h3 className="font-semibold text-white text-lg capitalize">{mode.replace('-', ' ')}</h3>
+                        </div>
                         {(mode === 'adjust' || mode === 'filter') && (
                              <Button 
                                 size="sm" 

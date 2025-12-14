@@ -54,42 +54,47 @@ export default function App() {
 
       <div 
         className={cn(
-          "relative w-full max-w-2xl p-16 rounded-[3rem] flex flex-col items-center justify-center text-center transition-all duration-500 ease-out border backdrop-blur-2xl shadow-2xl",
+          "relative w-full max-w-5xl rounded-3xl md:rounded-[3rem] flex flex-col md:flex-row overflow-hidden transition-all duration-500 ease-out border backdrop-blur-2xl shadow-2xl",
           isDragging 
             ? "border-white/50 bg-white/20 scale-[1.02]" 
-            : "border-white/10 bg-black/30 hover:bg-black/40 hover:border-white/20"
+            : "border-white/10 bg-black/40 hover:bg-black/50 hover:border-white/20"
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-[3rem] pointer-events-none">
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/20 blur-[100px] rounded-full" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 blur-[100px] rounded-full" />
+        {/* Decorative Background inside card */}
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+             <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-purple-500/20 blur-[120px] rounded-full" />
+             <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-500/20 blur-[120px] rounded-full" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center">
-            <div className="w-28 h-28 bg-white/5 rounded-[2rem] flex items-center justify-center mb-10 ring-1 ring-white/10 shadow-xl backdrop-blur-md group">
-              <Upload className="w-12 h-12 text-white/70 group-hover:text-white group-hover:scale-110 transition-all duration-300" strokeWidth={1.5} />
+        {/* Left Column: Content */}
+        <div className="flex-1 p-8 md:p-16 flex flex-col items-start justify-center text-left relative z-10">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-white/80 text-xs font-medium mb-8 backdrop-blur-md">
+                <Sparkles className="w-3 h-3 text-yellow-300" />
+                <span>Essential Editor</span>
             </div>
-            
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-lg">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70">
-                    Essential Editor
+
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight drop-shadow-lg">
+                Refine images <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400">
+                    in seconds.
                 </span>
             </h1>
             
-            <p className="text-lg text-white/60 mb-12 max-w-md leading-relaxed font-light">
-              Completely free! <br/>
-              <span className="text-white/40 text-sm">Crop, Filter, Adjust and Remove Backgrounds.</span>
+            <p className="text-lg text-white/60 mb-10 max-w-md leading-relaxed font-light">
+              The simplest tools in your browser. <br className="hidden md:block" />
+              Crop, compress, adjust, and remove background without uploading your data.
             </p>
             
-            <label className="relative cursor-pointer group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-white text-black hover:bg-white/90 font-semibold py-5 px-12 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 flex items-center gap-2 text-lg rounded-[40px]">
+            {/* The Main Action */}
+            <label className="relative cursor-pointer group w-full md:w-auto">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-500"></div>
+              <div className="relative bg-white text-black hover:bg-gray-50 font-semibold py-4 px-8 md:py-5 md:px-10 transition-all shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-3 text-lg rounded-full">
                 <ImageIcon className="w-5 h-5" />
-                Select your first image
+                <span>Select your first image</span>
               </div>
               <input 
                 type="file" 
@@ -98,15 +103,63 @@ export default function App() {
                 onChange={handleFileInput}
               />
             </label>
-            
-            <div className="mt-16 flex items-center gap-3 text-xs font-medium text-white/30 uppercase tracking-widest px-6 py-3 rounded-full border border-white/5 bg-white/5 backdrop-blur-md bg-[rgba(255,255,255,0.14)]">
-              <ImageIcon className="w-4 h-4 opacity-50" />
-              <span>Supports Most Image Formats</span>
-            </div>
 
-            <div className="mt-8 text-white/20 text-xs font-light text-[rgba(188,181,181,0.86)]">
-              Created with &lt;3 by <a href="https://asit.design" target="_blank" rel="noopener noreferrer" className="hover:text-white/40 transition-colors border-b border-white/10 hover:border-white/40 pb-0.5">Asit</a>
+            {/* Footer / Trust */}
+            <div className="mt-12 flex flex-wrap items-center gap-6 text-sm text-white/30 font-medium">
+                <span className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+                    Browser-based
+                </span>
+                <span className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
+                    Private
+                </span>
+                <span className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(192,132,252,0.5)]" />
+                    Free forever
+                </span>
             </div>
+        </div>
+
+        {/* Right Column: Visuals / Features (Desktop Only) */}
+        <div className="grid flex-1 relative bg-white/5 md:border-l border-t md:border-t-0 border-white/5 grid-cols-3 md:grid-cols-2 gap-3 md:gap-5 p-4 md:p-10 overflow-hidden place-content-center">
+             {[
+                 "https://images.unsplash.com/photo-1596309405988-b16d9e2852c7?q=80&w=600&auto=format&fit=crop",
+                 "https://images.unsplash.com/photo-1719224469475-5c67bde4c549?q=80&w=600&auto=format&fit=crop",
+                 "https://images.unsplash.com/photo-1701276077677-004ac175f875?q=80&w=600&auto=format&fit=crop",
+                 "https://images.unsplash.com/photo-1598285656754-535e61d246ec?q=80&w=600&auto=format&fit=crop",
+                 "https://images.unsplash.com/photo-1717665554058-7a83e4d238ff?q=80&w=600&auto=format&fit=crop",
+                 "https://images.unsplash.com/photo-1757991936080-9e9d75a47427?q=80&w=600&auto=format&fit=crop"
+             ].map((url, i) => (
+                 <div key={i} className={cn(
+                     "group relative rounded-2xl overflow-hidden cursor-pointer border border-white/10 shadow-lg transition-all duration-500 hover:z-20 hover:scale-[1.15] hover:shadow-2xl bg-gray-900 aspect-square",
+                     i % 2 === 0 ? "rotate-[-3deg] hover:rotate-0 translate-y-2 md:translate-y-4" : "rotate-[3deg] hover:rotate-0 -translate-y-2 md:-translate-y-4",
+                     "hover:border-white/30"
+                 )}>
+                    <img src={url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700" alt={`Sample ${i}`} />
+                    
+                    {/* Hover Overlay with Upload */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 backdrop-blur-[2px]">
+                        <label className="p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full border border-white/20 transition-colors cursor-pointer group/btn">
+                            <Upload className="w-4 h-4 md:w-5 md:h-5 text-white group-hover/btn:scale-110 transition-transform" />
+                            <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*"
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const img = e.target.closest('.group')?.querySelector('img');
+                                        if (img) img.src = URL.createObjectURL(file);
+                                    }
+                                }}
+                            />
+                        </label>
+                        <span className="text-[8px] md:text-[10px] uppercase tracking-widest text-white/70 font-medium">Replace</span>
+                    </div>
+                 </div>
+             ))}
         </div>
       </div>
     </div>

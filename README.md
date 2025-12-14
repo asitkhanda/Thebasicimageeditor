@@ -1,7 +1,7 @@
 
-  # Basic Image Editor
+  # Essential Editor
 
-  This is a code bundle for Basic Image Editor. The original project is available at https://www.figma.com/design/W6PozHb7rYNUKop0AH7DiK/Basic-Image-Editor.
+  This is a code bundle for Essential Editor. The original project is available at https://www.figma.com/design/W6PozHb7rYNUKop0AH7DiK/Essential-Editor.
 
   ## Running the code
 
