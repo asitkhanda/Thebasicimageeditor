@@ -48,7 +48,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 font-sans bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center selection:bg-pink-500/30">
+    <div className="min-h-screen flex items-center justify-center p-4 font-sans bg-[url('https://images.unsplash.com/photo-1677586895666-fd27db4205da?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center selection:bg-pink-500/30">
       {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
@@ -78,7 +78,7 @@ export default function App() {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight drop-shadow-lg">
-                Refine images <br/>
+                Edit images <br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400">
                     in seconds.
                 </span>
@@ -94,7 +94,7 @@ export default function App() {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-500"></div>
               <div className="relative bg-white text-black hover:bg-gray-50 font-semibold py-4 px-8 md:py-5 md:px-10 transition-all shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-3 text-lg rounded-full">
                 <ImageIcon className="w-5 h-5" />
-                <span>Select your first image</span>
+                <span>Upload your first image</span>
               </div>
               <input 
                 type="file" 
@@ -119,6 +119,17 @@ export default function App() {
                     Free forever
                 </span>
             </div>
+
+            {/* Peerlist Badge */}
+            <div className="mt-8">
+                <a href="https://peerlist.io/asitkhanda/project/essential-editor" target="_blank" rel="noreferrer" className="block hover:opacity-90 transition-opacity">
+                    <img
+                        src="https://peerlist.io/api/v1/projects/embed/PRJH6A7BNEA7BOB9O1RMRKD67NDLGM?showUpvote=true&theme=dark"
+                        alt="Essential Editor"
+                        className="h-[50px] md:h-[72px] w-auto rounded-lg"
+                    />
+                </a>
+            </div>
         </div>
 
         {/* Right Column: Visuals / Features (Desktop Only) */}
@@ -129,7 +140,7 @@ export default function App() {
                  "https://images.unsplash.com/photo-1701276077677-004ac175f875?q=80&w=600&auto=format&fit=crop",
                  "https://images.unsplash.com/photo-1598285656754-535e61d246ec?q=80&w=600&auto=format&fit=crop",
                  "https://images.unsplash.com/photo-1717665554058-7a83e4d238ff?q=80&w=600&auto=format&fit=crop",
-                 "https://images.unsplash.com/photo-1757991936080-9e9d75a47427?q=80&w=600&auto=format&fit=crop"
+                 "https://images.unsplash.com/photo-1713888723181-7a0c4de332a3?q=80&w=600&auto=format&fit=crop"
              ].map((url, i) => (
                  <div key={i} className={cn(
                      "group relative rounded-2xl overflow-hidden cursor-pointer border border-white/10 shadow-lg transition-all duration-500 hover:z-20 hover:scale-[1.15] hover:shadow-2xl bg-gray-900 aspect-square",

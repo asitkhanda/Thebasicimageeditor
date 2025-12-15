@@ -418,7 +418,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden selection:bg-pink-500/30 font-sans bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+    <div className="flex h-screen w-full flex-col overflow-hidden selection:bg-pink-500/30 font-sans bg-[url('https://images.unsplash.com/photo-1712259368727-382cbf35bb6e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-3xl" />
 
       {/* Loading Overlay for BG Removal */}
