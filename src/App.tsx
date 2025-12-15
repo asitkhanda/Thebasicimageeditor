@@ -50,7 +50,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans bg-[url('https://images.unsplash.com/photo-1677586895666-fd27db4205da?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center selection:bg-pink-500/30">
       {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
 
       <div 
         className={cn(
@@ -94,7 +94,7 @@ export default function App() {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-500"></div>
               <div className="relative bg-white text-black hover:bg-gray-50 font-semibold py-4 px-8 md:py-5 md:px-10 transition-all shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-3 text-lg rounded-full">
                 <ImageIcon className="w-5 h-5" />
-                <span>Upload your first image</span>
+                <span className="text-sm md:text-lg">Upload your first image</span>
               </div>
               <input 
                 type="file" 

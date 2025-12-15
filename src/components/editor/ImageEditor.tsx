@@ -462,7 +462,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       <div className="relative flex-1 flex overflow-hidden z-10">
         {/* Floating Toolbar (Left/Bottom) */}
         <div className="absolute left-1/2 -translate-x-1/2 bottom-6 md:bottom-auto md:left-6 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 flex flex-row md:flex-col gap-4 z-20 w-[90vw] md:w-auto justify-center md:justify-start">
-            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-3 rounded-2xl md:rounded-[2rem] shadow-2xl flex flex-row md:flex-col gap-3 overflow-x-auto no-scrollbar w-full md:w-auto justify-between md:justify-start">
+            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-3 rounded-2xl md:rounded-[2rem] shadow-2xl flex flex-row md:flex-col gap-3 overflow-x-auto md:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full md:w-auto justify-between md:justify-start">
                 <ToolButton icon={Crop} label="Crop" active={mode === 'crop'} onClick={() => setMode('crop')} />
                 <ToolButton icon={Sliders} label="Adjust" active={mode === 'adjust'} onClick={() => setMode('adjust')} />
                 <ToolButton icon={Palette} label="Filters" active={mode === 'filter'} onClick={() => setMode('filter')} />
