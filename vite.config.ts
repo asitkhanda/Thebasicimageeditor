@@ -5,6 +5,9 @@
 
   export default defineConfig({
     plugins: [react()],
+    optimizeDeps: {
+      include: ['heic-to', 'utif'],
+    },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -56,5 +59,15 @@
     server: {
       port: 3000,
       open: true,
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'credentialless',
+      },
+    },
+    preview: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'credentialless',
+      },
     },
   });

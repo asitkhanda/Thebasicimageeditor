@@ -2,20 +2,26 @@ import React, { useState, useCallback } from 'react';
 import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
 import ImageEditor from './components/editor/ImageEditor';
 import { cn } from './lib/utils';
+import { IMAGE_INPUT_ACCEPT } from './lib/image-formats';
+import { loadImageFile } from './lib/load-image-file';
 
 export default function App() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const onFileSelect = useCallback((file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setImageSrc(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+  const onFileSelect = useCallback(async (file: File) => {
+    if (!file) return;
+    setLoadError(null);
+    setIsLoading(true);
+    try {
+      const dataUrl = await loadImageFile(file);
+      setImageSrc(dataUrl);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Failed to load image');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -99,10 +105,18 @@ export default function App() {
               <input 
                 type="file" 
                 className="hidden" 
-                accept="image/jpeg, image/png, image/webp, image/gif, image/bmp, image/tiff"
+                accept={IMAGE_INPUT_ACCEPT}
                 onChange={handleFileInput}
+                disabled={isLoading}
               />
             </label>
+
+            {isLoading && (
+              <p className="mt-4 text-sm text-white/50">Loading image…</p>
+            )}
+            {loadError && (
+              <p className="mt-4 text-sm text-red-300">{loadError}</p>
+            )}
 
             {/* Footer / Trust */}
             <div className="mt-12 flex flex-wrap items-center gap-6 text-sm text-white/30 font-medium">
@@ -156,13 +170,17 @@ export default function App() {
                             <input 
                                 type="file" 
                                 className="hidden" 
-                                accept="image/*"
+                                accept={IMAGE_INPUT_ACCEPT}
                                 onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        const img = e.target.closest('.group')?.querySelector('img');
-                                        if (img) img.src = URL.createObjectURL(file);
+                                        try {
+                                            const dataUrl = await loadImageFile(file);
+                                            setImageSrc(dataUrl);
+                                        } catch (error) {
+                                            setLoadError(error instanceof Error ? error.message : 'Failed to load image');
+                                        }
                                     }
                                 }}
                             />

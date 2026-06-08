@@ -3,6 +3,7 @@ import ReactCrop, { type Crop as CropType, type PixelCrop, centerCrop, makeAspec
 import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
+import { Progress } from '../ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -47,15 +48,26 @@ import {
 } from 'lucide-react';
 import { 
   createImage, 
-  getCroppedImg, 
+  cropImage,
+  rotateImage,
+  flipImage,
   spotFix,
   removeRedEye,
-  removeImageBackground
 } from '../../lib/image-processing';
+import {
+  preloadBackgroundRemoval,
+  removeImageBackground,
+  type BgRemovalProgress,
+} from '../../lib/background-removal';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
 import { INSTAGRAM_FILTERS, type Filter } from '../../lib/filters';
+import {
+  EXPORT_FORMATS,
+  getDownloadExtension,
+} from '../../lib/image-formats';
+import { canvasToBlob, downloadFromCanvas } from '../../lib/canvas-export';
 
 // Apple Liquid Glass / VisionOS inspired colors
 // Base: dark, vibrant, translucent
@@ -113,11 +125,11 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   const [crop, setCrop] = useState<CropType>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [aspect, setAspect] = useState<number | undefined>(undefined);
-  const [rotation, setRotation] = useState(0);
-  const [flip, setFlip] = useState({ horizontal: false, vertical: false });
   
   // BG Removal state
   const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [isPreloadingBg, setIsPreloadingBg] = useState(false);
+  const [bgRemovalProgress, setBgRemovalProgress] = useState<BgRemovalProgress | null>(null);
   
   // Compression State
   const [compressSettings, setCompressSettings] = useState({
@@ -133,7 +145,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   
   // Save state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [saveFormat, setSaveFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
+  const [saveFormat, setSaveFormat] = useState(EXPORT_FORMATS[0].mime);
   const [saveQuality, setSaveQuality] = useState(0.9);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -157,6 +169,31 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     }
   }, [imageSrc, mode]);
 
+  useEffect(() => {
+    if (mode !== 'remove-bg') return;
+
+    let cancelled = false;
+    setIsPreloadingBg(true);
+    setBgRemovalProgress(null);
+
+    preloadBackgroundRemoval((progress) => {
+      if (!cancelled) setBgRemovalProgress(progress);
+    })
+      .catch((error) => {
+        console.error('Background removal preload failed:', error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsPreloadingBg(false);
+          setBgRemovalProgress(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
   // Handle Compression Preview
   useEffect(() => {
     if (mode === 'compress' && canvasRef.current) {
@@ -175,20 +212,18 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
             }, 'image/png');
 
             // 2. Generate Compressed Version
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    setCompressedSize(blob.size);
-                    const url = URL.createObjectURL(blob);
-                    setCompressedPreview(url);
-                }
-                setIsCompressing(false);
-            }, compressSettings.format, compressSettings.quality);
+            const blob = await canvasToBlob(canvas, compressSettings.format, compressSettings.quality);
+            if (blob) {
+                setCompressedSize(blob.size);
+                setCompressedPreview(URL.createObjectURL(blob));
+            }
+            setIsCompressing(false);
         };
         
         const timeout = setTimeout(updateCompression, 100); // Debounce
         return () => clearTimeout(timeout);
     }
-  }, [mode, compressSettings, filters, rotation, flip, crop]); // Add transform deps
+  }, [mode, compressSettings, filters, crop]);
 
   const getFilterString = (currentFilters: FilterValues) => {
     return `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) saturate(${currentFilters.saturation}%) sepia(${currentFilters.sepia}%) grayscale(${currentFilters.grayscale}%) blur(${currentFilters.blur}px) hue-rotate(${currentFilters.hueRotate}deg)`;
@@ -324,11 +359,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     if (ctx) {
         ctx.filter = getFilterString(filters);
         ctx.drawImage(img, 0, 0);
-        
-        const link = document.createElement('a');
-        link.download = `edited-image.${saveFormat}`;
-        link.href = canvas.toDataURL(`image/${saveFormat}`, saveQuality);
-        link.click();
+        downloadFromCanvas(canvas, saveFormat, saveQuality);
         setIsSaveDialogOpen(false);
     }
   };
@@ -336,8 +367,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
   const handleDownloadCompressed = () => {
     if (!compressedPreview) return;
     const link = document.createElement('a');
-    const ext = compressSettings.format.split('/')[1];
-    link.download = `compressed-image.${ext === 'jpeg' ? 'jpg' : ext}`;
+    link.download = `compressed-image.${getDownloadExtension(compressSettings.format)}`;
     link.href = compressedPreview;
     link.click();
   };
@@ -350,72 +380,111 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const onAspectChange = (value: number | undefined) => {
-      setAspect(value);
-      if (value && imgRef.current) {
-          const { width, height } = imgRef.current;
-          const crop = centerCrop(
-              makeAspectCrop(
-                  {
-                      unit: '%',
-                      width: 90,
-                  },
-                  value,
-                  width,
-                  height
-              ),
-              width,
-              height
-          );
-          setCrop(crop);
-          setCompletedCrop(convertToPixelCrop(crop, width, height));
-      }
+  const resetCropSelection = () => {
+    setCrop(undefined);
+    setCompletedCrop(undefined);
   };
 
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    const initialCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90 }, aspect ?? naturalWidth / naturalHeight, naturalWidth, naturalHeight),
+      naturalWidth,
+      naturalHeight
+    );
+    setCrop(initialCrop);
+    setCompletedCrop(convertToPixelCrop(initialCrop, naturalWidth, naturalHeight));
+  };
+
+  const onAspectChange = (value: number | undefined) => {
+    setAspect(value);
+    if (!imgRef.current) return;
+
+    const { naturalWidth, naturalHeight } = imgRef.current;
+    const newCrop = centerCrop(
+      makeAspectCrop(
+        { unit: '%', width: 90 },
+        value ?? naturalWidth / naturalHeight,
+        naturalWidth,
+        naturalHeight
+      ),
+      naturalWidth,
+      naturalHeight
+    );
+    setCrop(newCrop);
+    setCompletedCrop(convertToPixelCrop(newCrop, naturalWidth, naturalHeight));
+  };
+
+  const bakeTransform = async (transform: () => Promise<string | null>) => {
+    const result = await transform();
+    if (result) {
+      addToHistory(result, filters);
+      resetCropSelection();
+    }
+  };
+
+  const handleRotateLeft = () => bakeTransform(() => rotateImage(imageSrc, -90));
+  const handleRotateRight = () => bakeTransform(() => rotateImage(imageSrc, 90));
+  const handleFlipHorizontal = () =>
+    bakeTransform(() => flipImage(imageSrc, { horizontal: true, vertical: false }));
+  const handleFlipVertical = () =>
+    bakeTransform(() => flipImage(imageSrc, { horizontal: false, vertical: true }));
+
   const performCrop = async () => {
-      if (!imgRef.current) return;
+    if (!imgRef.current) return;
 
-      try {
-          const img = imgRef.current;
-          const scaleX = img.naturalWidth / img.width;
-          const scaleY = img.naturalHeight / img.height;
-          
-          const finalCrop = completedCrop ? {
-              x: completedCrop.x * scaleX,
-              y: completedCrop.y * scaleY,
-              width: completedCrop.width * scaleX,
-              height: completedCrop.height * scaleY
-          } : null;
+    try {
+      const img = imgRef.current;
+      let pixelCrop: { x: number; y: number; width: number; height: number } | null = null;
 
-          const cropped = await getCroppedImg(imageSrc, finalCrop, rotation, flip);
-          if (cropped) {
-              addToHistory(cropped, filters);
-              setRotation(0);
-              setFlip({ horizontal: false, vertical: false });
-              setCrop(undefined);
-              setCompletedCrop(undefined);
-              setMode(null);
-          }
-      } catch (e) {
-          console.error(e);
+      if (crop?.width && crop?.height) {
+        pixelCrop = convertToPixelCrop(crop, img.naturalWidth, img.naturalHeight);
+      } else if (completedCrop?.width && completedCrop?.height) {
+        const scaleX = img.naturalWidth / img.width;
+        const scaleY = img.naturalHeight / img.height;
+        pixelCrop = {
+          x: completedCrop.x * scaleX,
+          y: completedCrop.y * scaleY,
+          width: completedCrop.width * scaleX,
+          height: completedCrop.height * scaleY,
+        };
       }
+
+      const cropped = await cropImage(imageSrc, pixelCrop);
+      if (cropped) {
+        addToHistory(cropped, filters);
+        resetCropSelection();
+        setMode(null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleRemoveBg = async () => {
-      setIsRemovingBg(true);
-      try {
-          // Delay slightly to allow UI to update
-          await new Promise(resolve => setTimeout(resolve, 100));
-          const newSrc = await removeImageBackground(imageSrc);
-          addToHistory(newSrc, filters);
-          setMode(null);
-      } catch (error) {
-          console.error("BG Removal failed", error);
-          alert("Could not remove background. Please try again or use a simpler image.");
-      } finally {
-          setIsRemovingBg(false);
-      }
-  }
+    setIsRemovingBg(true);
+    setBgRemovalProgress({
+      phase: 'processing',
+      step: 'Starting…',
+      percent: 0,
+    });
+
+    try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
+      const newSrc = await removeImageBackground(imageSrc, setBgRemovalProgress);
+      addToHistory(newSrc, filters);
+      setMode(null);
+    } catch (error) {
+      console.error('BG Removal failed', error);
+      alert('Could not remove background. Please try again or use a simpler image.');
+    } finally {
+      setIsRemovingBg(false);
+      setBgRemovalProgress(null);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden selection:bg-pink-500/30 font-sans bg-[url('https://images.unsplash.com/photo-1712259368727-382cbf35bb6e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
@@ -424,12 +493,18 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
       {/* Loading Overlay for BG Removal */}
       {isRemovingBg && (
         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
-            <div className="bg-white/10 border border-white/20 p-8 rounded-3xl flex flex-col items-center shadow-2xl">
+            <div className="bg-white/10 border border-white/20 p-8 rounded-3xl flex flex-col items-center shadow-2xl w-full max-w-sm mx-4">
                 <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
                 <h3 className="text-xl font-medium text-white mb-2">Removing Background</h3>
-                <p className="text-white/60 text-sm text-center max-w-xs">
-                    This runs entirely on your device using AI. The first time may take a few seconds to load models.
+                <p className="text-white/60 text-sm text-center max-w-xs mb-4">
+                    {bgRemovalProgress?.step ?? 'Processing on your device…'}
                 </p>
+                <div className="w-full space-y-2">
+                  <Progress value={bgRemovalProgress?.percent ?? 0} className="h-2" />
+                  <p className="text-center text-xs text-white/50">
+                    {bgRemovalProgress?.percent ?? 0}% — runs locally, no data sent to a server
+                  </p>
+                </div>
             </div>
         </div>
       )}
@@ -490,8 +565,6 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                   aspect={aspect}
                   className="shadow-2xl rounded-lg ring-1 ring-white/20"
                   style={{
-                      transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
-                      transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
                       position: 'relative',
                       maxHeight: '75vh',
                       maxWidth: '100%'
@@ -501,6 +574,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                      ref={imgRef}
                      src={imageSrc} 
                      alt="Crop target"
+                     onLoad={onImageLoad}
                      style={{ 
                          filter: getFilterString(filters),
                          maxHeight: '75vh',
@@ -525,8 +599,7 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                         className="max-w-full max-h-[75vh] object-contain block"
                         style={{ 
                             filter: getFilterString(filters),
-                            transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
-                            display: mode === 'compress' ? 'none' : 'block' // Hide default canvas in compress mode to use custom view
+                            display: mode === 'compress' ? 'none' : 'block'
                         }}
                         onMouseDown={startInteraction}
                         onMouseMove={moveInteraction}
@@ -672,16 +745,16 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                 <div>
                                     <Label className="mb-4 block text-xs font-bold uppercase tracking-widest text-white/40">Transform</Label>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={() => setRotation(r => r - 90)}>
+                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={handleRotateLeft}>
                                             <RotateCw className="mr-2 h-4 w-4 rotate-180" /> -90°
                                         </Button>
-                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={() => setRotation(r => r + 90)}>
+                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={handleRotateRight}>
                                             <RotateCw className="mr-2 h-4 w-4" /> +90°
                                         </Button>
-                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={() => setFlip(f => ({...f, horizontal: !f.horizontal}))}>
+                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={handleFlipHorizontal}>
                                             Flip H
                                         </Button>
-                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={() => setFlip(f => ({...f, vertical: !f.vertical}))}>
+                                        <Button variant="outline" className="h-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white" onClick={handleFlipVertical}>
                                             Flip V
                                         </Button>
                                     </div>
@@ -767,18 +840,18 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                 <div>
                                     <Label className="mb-4 block text-xs font-bold uppercase tracking-widest text-white/40">Format</Label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {['image/jpeg', 'image/png', 'image/webp'].map(fmt => (
+                                        {EXPORT_FORMATS.map((fmt) => (
                                             <button
-                                                key={fmt}
-                                                onClick={() => setCompressSettings(s => ({...s, format: fmt}))}
+                                                key={fmt.mime}
+                                                onClick={() => setCompressSettings(s => ({...s, format: fmt.mime}))}
                                                 className={cn(
                                                     "px-3 py-3 rounded-xl border text-sm font-medium transition-all",
-                                                    compressSettings.format === fmt 
+                                                    compressSettings.format === fmt.mime 
                                                         ? "bg-white text-black border-white shadow-lg" 
                                                         : "bg-white/5 text-white border-white/10 hover:bg-white/10"
                                                 )}
                                             >
-                                                {fmt.split('/')[1].toUpperCase().replace('JPEG', 'JPG')}
+                                                {fmt.label}
                                             </button>
                                         ))}
                                     </div>
@@ -902,24 +975,44 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
                                 <div>
                                     <h4 className="font-medium text-white text-lg mb-2">Magic Removal</h4>
                                     <p className="text-sm text-white/50 max-w-[200px] mx-auto leading-relaxed">
-                                        AI-powered background removal. Precise, fast, and runs locally on your device.
+                                        AI-powered background removal. Runs locally on your device — free, private, and no upload required.
                                     </p>
                                 </div>
+
+                                {(isRemovingBg || isPreloadingBg) && (
+                                  <div className="w-full space-y-2 px-1">
+                                    <div className="flex items-center justify-between text-xs text-white/50">
+                                      <span>
+                                        {isPreloadingBg ? 'Loading AI models…' : bgRemovalProgress?.step ?? 'Processing…'}
+                                      </span>
+                                      <span>{bgRemovalProgress?.percent ?? 0}%</span>
+                                    </div>
+                                    <Progress value={bgRemovalProgress?.percent ?? 0} className="h-2" />
+                                  </div>
+                                )}
+
+                                {isPreloadingBg && !isRemovingBg && (
+                                  <p className="text-xs text-white/40 max-w-[220px]">
+                                    First-time setup downloads ~80 MB of models. They are cached in your browser for future use.
+                                  </p>
+                                )}
                                 
                                 <Button 
                                     size="lg" 
                                     className="w-full rounded-2xl bg-white text-black hover:bg-white/90 font-semibold h-14 shadow-lg shadow-white/10"
                                     onClick={handleRemoveBg}
-                                    disabled={isRemovingBg}
+                                    disabled={isRemovingBg || isPreloadingBg}
                                 >
                                     {isRemovingBg ? (
                                         <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing...
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Removing background…
+                                        </>
+                                    ) : isPreloadingBg ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Preparing…
                                         </>
                                     ) : (
-                                        <>
-                                            Remove Background
-                                        </>
+                                        'Remove Background'
                                     )}
                                 </Button>
                             </div>
@@ -942,19 +1035,21 @@ export default function ImageEditor({ initialImage, onClose }: ImageEditorProps)
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-white/40">Format</Label>
-              <Select value={saveFormat} onValueChange={(v: any) => setSaveFormat(v)}>
+              <Select value={saveFormat} onValueChange={(v) => setSaveFormat(v)}>
                 <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
-                  <SelectItem value="png">PNG (Lossless)</SelectItem>
-                  <SelectItem value="jpeg">JPEG (Compressed)</SelectItem>
-                  <SelectItem value="webp">WebP (Modern)</SelectItem>
+                  {EXPORT_FORMATS.map((fmt) => (
+                    <SelectItem key={fmt.mime} value={fmt.mime}>
+                      {fmt.label} ({fmt.lossless ? 'Lossless' : 'Compressed'})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {(saveFormat === 'jpeg' || saveFormat === 'webp') && (
+            {EXPORT_FORMATS.find((f) => f.mime === saveFormat)?.qualitySupported && (
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <Label className="text-xs font-bold uppercase tracking-widest text-white/40">Quality</Label>
