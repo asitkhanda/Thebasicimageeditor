@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import ImageEditor from './components/editor/ImageEditor';
 import { cn } from './lib/utils';
 import { IMAGE_INPUT_ACCEPT } from './lib/image-formats';
@@ -50,7 +51,12 @@ export default function App() {
   };
 
   if (imageSrc) {
-    return <ImageEditor initialImage={imageSrc} onClose={() => setImageSrc(null)} />;
+    return (
+      <>
+        <ImageEditor initialImage={imageSrc} onClose={() => setImageSrc(null)} />
+        <Analytics />
+      </>
+    );
   }
 
   return (
@@ -191,6 +197,7 @@ export default function App() {
              ))}
         </div>
       </div>
+      <Analytics />
     </div>
   );
 }
