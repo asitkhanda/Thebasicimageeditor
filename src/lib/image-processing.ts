@@ -1,18 +1,3 @@
-// Helper to configure ONNX Runtime globally to avoid multi-threading errors
-// in environments without cross-origin isolation (COOP/COEP)
-if (typeof window !== "undefined") {
-  // @ts-ignore
-  if (!window.ort) window.ort = {};
-  // @ts-ignore
-  if (!window.ort.env) window.ort.env = {};
-  // @ts-ignore
-  if (!window.ort.env.wasm) window.ort.env.wasm = {};
-  // @ts-ignore
-  window.ort.env.wasm.numThreads = 1;
-  // @ts-ignore
-  window.ort.env.wasm.proxy = false;
-}
-
 /**
  * Helper functions for image processing
  */
@@ -119,31 +104,66 @@ export async function getCroppedImg(
   return canvas.toDataURL("image/png");
 }
 
-/**
- * Advanced Background Removal using @imgly/background-removal
- */
-export async function removeImageBackground(
+/** Bake rotation into the image pixels (no crop). */
+export async function rotateImage(
   imageSrc: string,
-): Promise<string> {
-  try {
-    // Dynamic import to ensure configuration runs before library loads
-    const { removeBackground } = await import("@imgly/background-removal");
-    
-    // We use the default configuration which automatically resolves assets
-    // from unpkg/jsdelivr based on the installed version.
-    // This avoids "Failed to fetch" errors caused by mismatched version URLs.
-    const blob = await removeBackground(imageSrc, {
-      progress: (key, current, total) => {
-        console.log(
-          `Downloading ${key}: ${Math.round((current / total) * 100)}%`,
-        );
-      },
-    });
-    return URL.createObjectURL(blob);
-  } catch (error) {
-    console.error("Background removal failed:", error);
-    throw error;
+  degrees: number,
+): Promise<string | null> {
+  return getCroppedImg(imageSrc, null, degrees, {
+    horizontal: false,
+    vertical: false,
+  });
+}
+
+/** Bake a horizontal or vertical flip into the image pixels (no crop). */
+export async function flipImage(
+  imageSrc: string,
+  flip: { horizontal: boolean; vertical: boolean },
+): Promise<string | null> {
+  return getCroppedImg(imageSrc, null, 0, flip);
+}
+
+/**
+ * Crop an image using pixel coordinates relative to the image's natural dimensions.
+ * Rotation and flip must already be baked into imageSrc.
+ */
+export async function cropImage(
+  imageSrc: string,
+  pixelCrop: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null,
+): Promise<string | null> {
+  if (!pixelCrop) {
+    return imageSrc;
   }
+
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    return null;
+  }
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height,
+  );
+
+  return canvas.toDataURL("image/png");
 }
 
 /**
