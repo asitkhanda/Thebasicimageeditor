@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import ImageEditor from './components/editor/ImageEditor';
 import { cn } from './lib/utils';
 import { IMAGE_INPUT_ACCEPT } from './lib/image-formats';
@@ -191,6 +192,7 @@ export default function App() {
              ))}
         </div>
       </div>
+      <SpeedInsights />
     </div>
   );
 }
